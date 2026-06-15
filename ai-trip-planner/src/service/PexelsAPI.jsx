@@ -1,6 +1,8 @@
 import axios from "axios";
 
-const BACKEND_PEXELS_URL = "http://localhost:5000/api/pexels-image";
+const BACKEND_PEXELS_URL = import.meta.env.VITE_BACKEND_URL 
+  ? `${import.meta.env.VITE_BACKEND_URL.replace(/\/$/, '')}/api/pexels-image` 
+  : "http://localhost:5000/api/pexels-image";
 
 export async function searchPexelsImage(query) {
   if (!query?.trim()) {

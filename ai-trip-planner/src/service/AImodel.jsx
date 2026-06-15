@@ -1,6 +1,8 @@
 import axios from "axios";
 
-const BACKEND_URL = "http://localhost:5000/api/generate-trip";
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL 
+  ? `${import.meta.env.VITE_BACKEND_URL.replace(/\/$/, '')}/api/generate-trip` 
+  : "http://localhost:5000/api/generate-trip";
 
 // Create a custom chatSession wrapper that proxies requests to our Node/Express backend
 export const chatSession = {
