@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+ai-trip-planner/node_modules/
+server/node_modules/
+
+# Build outputs
+dist/
+ai-trip-planner/dist/
+
+# Environment/API Keys
+.env
+.env.local
+.env.*.local
+server/.env
+ai-trip-planner/.env.local
+
+# IDEs & System files
+.vscode/
+.idea/
+.DS_Store
+*.log
+Thumbs.db
