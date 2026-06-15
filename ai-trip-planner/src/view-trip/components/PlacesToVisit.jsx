@@ -7,7 +7,7 @@ function PlacesToVisit({ trip, isPrinting }) {
   const isImageValid = (url) => {
     if (!url || typeof url !== 'string') return false;
     const lower = url.toLowerCase();
-    return lower.includes('pexels.com') || lower.includes('wikimedia.org') || lower.includes('unsplash.com') || lower.includes('wikipedia.org');
+    return lower.includes('pexels.com') || lower.includes('unsplash.com');
   };
 
   const itinerary = trip?.tripData?.itinerary || trip?.tripData?.Itinerary;
@@ -177,7 +177,15 @@ function PlacesToVisit({ trip, isPrinting }) {
                       return (
                         <div key={pIdx} className='flex gap-4 p-4 bg-white border border-slate-100 rounded-xl'>
                           <div className='w-32 h-24 rounded-lg overflow-hidden shadow-xs shrink-0'>
-                            <img src={placeImg} alt={placeName} className='w-full h-full object-cover' />
+                            <img 
+                              src={placeImg} 
+                              alt={placeName} 
+                              className='w-full h-full object-cover' 
+                              onError={(e) => {
+                                e.currentTarget.onerror = null;
+                                e.currentTarget.src = DUMMY_IMAGE;
+                              }}
+                            />
                           </div>
                           <div className='flex-1 flex flex-col justify-between'>
                             <div>
@@ -302,6 +310,10 @@ function PlacesToVisit({ trip, isPrinting }) {
                             src={placeImg}
                             alt={placeName}
                             className='w-full h-full object-cover group-hover:scale-105 transition-transform duration-500'
+                            onError={(e) => {
+                              e.currentTarget.onerror = null;
+                              e.currentTarget.src = DUMMY_IMAGE;
+                            }}
                           />
                         </div>
                         <div className='flex-1 flex flex-col justify-between'>
