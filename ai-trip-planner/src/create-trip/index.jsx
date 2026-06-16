@@ -132,35 +132,37 @@ function CreateTrip() {
     handleGenerateTrip(updatedData);
   };
 
-  const handleGenerateTrip = async (dataToUse = formData) => {
+  const handleGenerateTrip = async (dataToUse) => {
+    const actualData = (dataToUse && !dataToUse.target && !dataToUse.preventDefault) ? dataToUse : formData;
+    
     const user = localStorage.getItem("user");
     if (!user) {
       setOpenDialog(true);
       return;
     }
-    if (!dataToUse?.location || !dataToUse?.budget || !dataToUse?.traveller || !dataToUse?.days) {
+    if (!actualData?.location || !actualData?.budget || !actualData?.traveller || !actualData?.days) {
       toast("Please fill all the details correctly")
       return;
     }
-    if (Number(dataToUse?.days) > 5) {
+    if (Number(actualData?.days) > 5) {
       toast("Please enter 5 days or fewer to ensure a reliable response within token limits.")
       return;
     }
 
-    if (!dataToUse?.startDate || !dataToUse?.departureCity) {
-      if (dataToUse?.departureCity) setDepartureCity(dataToUse.departureCity);
-      if (dataToUse?.startDate) setStartDate(dataToUse.startDate);
+    if (!actualData?.startDate || !actualData?.departureCity) {
+      if (actualData?.departureCity) setDepartureCity(actualData.departureCity);
+      if (actualData?.startDate) setStartDate(actualData.startDate);
       setOpenDatesDialog(true);
       return;
     }
 
     setLoading(true);
     try {
-      const FINAL_PROMPT = AI_PROMPT.replaceAll('{location}', dataToUse?.location)
-        .replace('{days}', dataToUse?.days)
-        .replace('{traveller}', dataToUse?.traveller)
-        .replace('{budget}', dataToUse?.budget)
-        .replace('{budget}', dataToUse?.budget);
+      const FINAL_PROMPT = AI_PROMPT.replaceAll('{location}', actualData?.location)
+        .replace('{days}', actualData?.days)
+        .replace('{traveller}', actualData?.traveller)
+        .replace('{budget}', actualData?.budget)
+        .replace('{budget}', actualData?.budget);
 
       console.log(FINAL_PROMPT)
 
@@ -168,7 +170,7 @@ function CreateTrip() {
       const textResponse = result.response.text();
       console.log(textResponse);
       
-      await saveAItrip(textResponse, dataToUse);
+      await saveAItrip(textResponse, actualData);
     } catch (error) {
       console.error("Error generating trip:", error);
       toast("Failed to generate trip. Please try again.");
