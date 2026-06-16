@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
+import { Link } from 'react-router-dom'
 import { Button } from '../components/ui/button'
 import { useGoogleLogin } from '@react-oauth/google'
 import axios from 'axios'
@@ -69,13 +70,13 @@ function Header() {
 
   return (
     <div className='py-3 px-4 md:py-4 md:px-6 flex items-center justify-between bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b border-gray-100 shadow-sm transition-all duration-300'>
-      <div className='flex items-center gap-2 cursor-pointer animate-fade-in' onClick={() => window.location.href = '/'}>
+      <Link to="/" className='flex items-center gap-2 cursor-pointer animate-fade-in'>
         <img src="/logoo.png" className='w-24 h-10 md:w-32 md:h-14 object-contain transition-transform duration-300 hover:scale-[1.02]' alt="Logo" />
-      </div>
+      </Link>
       
       {user ? (
         <div className='flex items-center gap-4'>
-          <a href="/my-trips" className='hidden md:block'>
+          <Link to="/my-trips" className='hidden md:block'>
             <Button 
               variant="ghost" 
               className="font-medium text-gray-650 hover:text-emerald-600 hover:bg-emerald-50/50 cursor-pointer flex items-center gap-2 rounded-full px-4 py-2"
@@ -83,15 +84,15 @@ function Header() {
               <FolderHeart className='w-4.5 h-4.5 text-emerald-600' />
               My Trips
             </Button>
-          </a>
-          <a href="/create-trip">
+          </Link>
+          <Link to="/create-trip">
             <Button 
               className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-md shadow-emerald-200/50 rounded-full px-5 py-2 transition-all duration-300 transform hover:scale-105 cursor-pointer flex items-center gap-2"
             >
               <Plus className='w-4.5 h-4.5' />
               Create Trip
             </Button>
-          </a>
+          </Link>
           
           <div className='relative' ref={dropdownRef}>
             <img 
@@ -109,18 +110,18 @@ function Header() {
                   <p className='text-xs text-gray-500 truncate'>{user?.email}</p>
                 </div>
                 <div className='py-1.5'>
-                  <a href="/my-trips" className='md:hidden block' onClick={() => setDropdownOpen(false)}>
+                  <Link to="/my-trips" className='md:hidden block' onClick={() => setDropdownOpen(false)}>
                     <button className='w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-emerald-50/50 hover:text-emerald-700 transition-colors duration-200 flex items-center gap-2 cursor-pointer font-medium'>
                       <FolderHeart className='w-4 h-4 text-emerald-600' />
                       My Trips
                     </button>
-                  </a>
-                  <a href="/" onClick={() => setDropdownOpen(false)}>
+                  </Link>
+                  <Link to="/" onClick={() => setDropdownOpen(false)}>
                     <button className='w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-emerald-50/50 hover:text-emerald-700 transition-colors duration-200 flex items-center gap-2 cursor-pointer font-medium'>
                       <Compass className='w-4 h-4 text-emerald-600' />
                       Home
                     </button>
-                  </a>
+                  </Link>
                 </div>
                 <div className='border-t border-slate-100 pt-1.5 px-2'>
                   <button 
