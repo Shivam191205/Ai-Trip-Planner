@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react'
 import { searchPexelsImage } from '@/service/PexelsAPI';
 import { Button } from '@/components/ui/button';
-import { Download, Loader2 } from 'lucide-react';
+import { Download, Loader2, Share2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 function InfoSection({ trip, isPrinting, onDownloadPDF, pdfLoading }) {
   const [imageUrl, setImageUrl] = useState("");
@@ -12,6 +13,52 @@ function InfoSection({ trip, isPrinting, onDownloadPDF, pdfLoading }) {
   const travellers = trip?.userSelection?.traveller;
   const estimatedTotalCost = trip?.tripData?.estimated_total_cost || trip?.tripData?.estimatedTotalCost || trip?.tripData?.total_cost || trip?.tripData?.totalCost;
   const estimatedCostPerPerson = trip?.tripData?.estimated_cost_per_person || trip?.tripData?.estimatedCostPerPerson || trip?.tripData?.cost_per_person || trip?.tripData?.costPerPerson || trip?.tripData?.per_person_budget || trip?.tripData?.perPersonBudget;
+  const startDate = trip?.userSelection?.startDate;
+  const endDate = trip?.userSelection?.endDate;
+
+  const formatTravelDates = (start, end) => {
+    if (!start) return "";
+    
+    const parseLocalDate = (dateStr) => {
+      const parts = dateStr.split('-');
+      if (parts.length === 3) {
+        return new Date(parts[0], parts[1] - 1, parts[2]);
+      }
+      return new Date(dateStr);
+    };
+
+    const options = { month: 'short', day: 'numeric', year: 'numeric' };
+    const formattedStart = parseLocalDate(start).toLocaleDateString('en-US', options);
+    
+    if (!end) return formattedStart;
+    
+    const formattedEnd = parseLocalDate(end).toLocaleDateString('en-US', options);
+    
+    return `${formattedStart} - ${formattedEnd}`;
+  };
+
+  const handleShare = async () => {
+    const shareData = {
+      title: `${location || 'AI Trip Planner'} Itinerary`,
+      text: `Check out my custom ${days ? `${days}-day` : ''} itinerary for ${location || 'our trip'}!`,
+      url: window.location.href,
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+        toast.success("Trip shared successfully!");
+      } else {
+        await navigator.clipboard.writeText(window.location.href);
+        toast.success("Link copied to clipboard!");
+      }
+    } catch (error) {
+      if (error.name !== 'AbortError') {
+        console.error("Error sharing trip:", error);
+        toast.error("Failed to share link.");
+      }
+    }
+  };
 
   useEffect(() => {
     if (!location) return;
@@ -50,9 +97,14 @@ function InfoSection({ trip, isPrinting, onDownloadPDF, pdfLoading }) {
 
       <div className='my-1 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-100 pb-5'>
         <div className='flex flex-wrap gap-2.5 sm:gap-3'>
+          {startDate && (
+            <div className='flex items-center gap-1.5 px-4 py-2 sm:px-5 sm:py-2.5 bg-rose-50 text-rose-700 border border-rose-100 rounded-full text-xs sm:text-sm font-bold shadow-xs transition-all duration-200 hover:-translate-y-0.5 cursor-default'>
+              <span>📅</span> {formatTravelDates(startDate, endDate)}
+            </div>
+          )}
           {days && (
             <div className='flex items-center gap-1.5 px-4 py-2 sm:px-5 sm:py-2.5 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-full text-xs sm:text-sm font-bold shadow-xs transition-all duration-200 hover:-translate-y-0.5 cursor-default'>
-              <span>📅</span> {days} Days
+              <span>⏱️</span> {days} Days
             </div>
           )}
           {budget && (
@@ -78,23 +130,33 @@ function InfoSection({ trip, isPrinting, onDownloadPDF, pdfLoading }) {
         </div>
 
         {!isPrinting && (
-          <Button 
-            onClick={onDownloadPDF}
-            disabled={pdfLoading}
-            className="w-full md:w-auto cursor-pointer bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-2.5 rounded-full shadow-md shadow-emerald-200/50 flex items-center justify-center gap-2 transition-all duration-300 transform hover:scale-105 shrink-0"
-          >
-            {pdfLoading ? (
-              <>
-                <Loader2 className="w-4.5 h-4.5 animate-spin" />
-                Generating...
-              </>
-            ) : (
-              <>
-                <Download className="w-4.5 h-4.5" />
-                Download PDF
-              </>
-            )}
-          </Button>
+          <div className='flex gap-3 w-full md:w-auto flex-wrap'>
+            <Button
+              onClick={handleShare}
+              className="flex-1 md:flex-none cursor-pointer bg-slate-900 hover:bg-slate-800 text-white font-bold px-6 py-2.5 rounded-full shadow-md flex items-center justify-center gap-2 transition-all duration-300 transform hover:scale-105 shrink-0"
+            >
+              <Share2 className="w-4.5 h-4.5" />
+              Share Trip
+            </Button>
+
+            <Button 
+              onClick={onDownloadPDF}
+              disabled={pdfLoading}
+              className="flex-1 md:flex-none cursor-pointer bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-2.5 rounded-full shadow-md shadow-emerald-200/50 flex items-center justify-center gap-2 transition-all duration-300 transform hover:scale-105 shrink-0"
+            >
+              {pdfLoading ? (
+                <>
+                  <Loader2 className="w-4.5 h-4.5 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Download className="w-4.5 h-4.5" />
+                  Download PDF
+                </>
+              )}
+            </Button>
+          </div>
         )}
       </div>
     </div>

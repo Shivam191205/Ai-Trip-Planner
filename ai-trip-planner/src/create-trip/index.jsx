@@ -33,6 +33,9 @@ function CreateTrip() {
   const [place, setPlace] = useState(null)
   const [formData, setformData] = useState({})
   const [openDialog, setOpenDialog] = useState(false);
+  const [openDatesDialog, setOpenDatesDialog] = useState(false);
+  const [startDate, setStartDate] = useState("");
+  const [departureCity, setDepartureCity] = useState("");
   const[loading,setLoading]=useState(false);
   const route=useNavigate();
   const [searchParams] = useSearchParams();
@@ -98,27 +101,66 @@ function CreateTrip() {
     return JSON.parse(raw);
   };
 
-  const handleGenerateTrip = async () => {
+  const getEndDate = () => {
+    if (!startDate || !formData?.days) return "";
+    const date = new Date(startDate);
+    date.setDate(date.getDate() + Number(formData.days));
+    return date.toISOString().split('T')[0];
+  };
+
+  const handleDatesSubmit = (e) => {
+    e.preventDefault();
+    if (!departureCity.trim()) {
+      toast.error("Please enter a departure city.");
+      return;
+    }
+    if (!startDate) {
+      toast.error("Please select your travel start date.");
+      return;
+    }
+    
+    const calculatedEnd = getEndDate();
+    const updatedData = {
+      ...formData,
+      departureCity: departureCity.trim(),
+      startDate: startDate,
+      endDate: calculatedEnd
+    };
+    
+    setformData(updatedData);
+    setOpenDatesDialog(false);
+    handleGenerateTrip(updatedData);
+  };
+
+  const handleGenerateTrip = async (dataToUse = formData) => {
     const user = localStorage.getItem("user");
     if (!user) {
       setOpenDialog(true);
       return;
     }
-    if (!formData?.location || !formData?.budget || !formData?.traveller || !formData?.days) {
+    if (!dataToUse?.location || !dataToUse?.budget || !dataToUse?.traveller || !dataToUse?.days) {
       toast("Please fill all the details correctly")
       return;
     }
-    if (Number(formData?.days) > 5) {
+    if (Number(dataToUse?.days) > 5) {
       toast("Please enter 5 days or fewer to ensure a reliable response within token limits.")
       return;
     }
+
+    if (!dataToUse?.startDate || !dataToUse?.departureCity) {
+      if (dataToUse?.departureCity) setDepartureCity(dataToUse.departureCity);
+      if (dataToUse?.startDate) setStartDate(dataToUse.startDate);
+      setOpenDatesDialog(true);
+      return;
+    }
+
     setLoading(true);
     try {
-      const FINAL_PROMPT = AI_PROMPT.replaceAll('{location}', formData?.location)
-        .replace('{days}', formData?.days)
-        .replace('{traveller}', formData?.traveller)
-        .replace('{budget}', formData?.budget)
-        .replace('{budget}', formData?.budget);
+      const FINAL_PROMPT = AI_PROMPT.replaceAll('{location}', dataToUse?.location)
+        .replace('{days}', dataToUse?.days)
+        .replace('{traveller}', dataToUse?.traveller)
+        .replace('{budget}', dataToUse?.budget)
+        .replace('{budget}', dataToUse?.budget);
 
       console.log(FINAL_PROMPT)
 
@@ -126,7 +168,7 @@ function CreateTrip() {
       const textResponse = result.response.text();
       console.log(textResponse);
       
-      await saveAItrip(textResponse);
+      await saveAItrip(textResponse, dataToUse);
     } catch (error) {
       console.error("Error generating trip:", error);
       toast("Failed to generate trip. Please try again.");
@@ -135,7 +177,7 @@ function CreateTrip() {
     }
   }
 
-  const saveAItrip = async (TripData) => {
+  const saveAItrip = async (TripData, dataToUse = formData) => {
     const docId = Date.now().toString();
     const user = JSON.parse(localStorage.getItem("user"));
     
@@ -148,7 +190,7 @@ function CreateTrip() {
     }
 
     await setDoc(doc(db, "trips", docId), {
-      userSelection: formData,
+      userSelection: dataToUse,
       email: user?.email,
       tripData: parsedData,
       ID: docId,
@@ -314,6 +356,64 @@ function CreateTrip() {
               </div>
             </DialogDescription>
           </DialogHeader>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={openDatesDialog} onOpenChange={setOpenDatesDialog}>
+        <DialogContent className="glass-panel border-white/60 shadow-2xl rounded-3xl max-w-md w-full">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-black text-gray-900 text-center">
+              Specify Travel Details 📅
+            </DialogTitle>
+            <DialogDescription className="text-gray-500 text-sm text-center mt-1">
+              Provide departure details and dates to personalize your weather and flight options.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleDatesSubmit} className="mt-6 flex flex-col gap-5">
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-bold text-gray-700 flex items-center gap-1.5">
+                <span>🛫</span> Where are you flying from?
+              </label>
+              <Input
+                type="text"
+                placeholder="Departure city, e.g. Delhi"
+                value={departureCity}
+                onChange={(e) => setDepartureCity(e.target.value)}
+                className="rounded-2xl border-gray-200 focus:border-emerald-500 focus:ring-emerald-500/20 bg-white py-5 text-base shadow-xs"
+                required
+              />
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-bold text-gray-700 flex items-center gap-1.5">
+                <span>📅</span> Travel Start Date
+              </label>
+              <input
+                type="date"
+                min={new Date().toISOString().split('T')[0]}
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="flex h-12 w-full rounded-2xl border border-gray-200 bg-white px-3 py-2 text-base shadow-xs transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-emerald-500/20 focus-visible:border-emerald-500"
+                required
+              />
+            </div>
+
+            {startDate && formData?.days && (
+              <div className="bg-emerald-50/50 border border-emerald-100/50 rounded-2xl p-4 text-center mt-2">
+                <p className="text-emerald-950 text-sm font-semibold">
+                  Your trip will run from <span className="underline font-bold text-emerald-800">{startDate}</span> to <span className="underline font-bold text-emerald-800">{getEndDate()}</span> ({formData?.days} days).
+                </p>
+              </div>
+            )}
+
+            <Button
+              type="submit"
+              className="w-full mt-4 bg-gradient-to-r from-emerald-600 to-indigo-600 hover:from-emerald-700 hover:to-indigo-700 text-white font-bold py-4 rounded-xl cursor-pointer shadow-md transition-all hover:scale-[1.01]"
+            >
+              Confirm & Generate Trip ✨
+            </Button>
+          </form>
         </DialogContent>
       </Dialog>
     </div>
