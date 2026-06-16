@@ -299,7 +299,7 @@ function CreateTrip() {
         </div>
       </div>
 
-      <Dialog open={openDialog}>
+      <Dialog open={openDialog} onOpenChange={setOpenDialog}>
         <DialogContent className="glass-panel border-white/60 shadow-2xl rounded-3xl">
           <DialogHeader>
             <DialogDescription>
