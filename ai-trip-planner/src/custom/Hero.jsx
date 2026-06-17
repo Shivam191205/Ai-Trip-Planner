@@ -126,18 +126,17 @@ function Hero() {
 
   return (
     <div className='w-full bg-[#fcfbf7]/40 min-h-screen flex flex-col items-center'>
-      
-      {/* Hero Header Section with Background */}
+           {/* Hero Header Section with Background */}
       <div 
         className='relative w-full min-h-[90vh] flex flex-col items-center justify-center py-10 md:py-20 px-4 md:px-12 lg:px-24'
         style={{
-          backgroundImage: "url('/landing_bg.png')",
+          backgroundImage: "url('/travel_landing_bg.png')",
           backgroundSize: "cover",
-          backgroundPosition: "bottom center",
+          backgroundPosition: "center center",
           backgroundRepeat: "no-repeat"
         }}
       >
-        <div className='max-w-3xl text-center space-y-5 md:space-y-8 mb-12 md:mb-24 bg-white/85 backdrop-blur-md border border-white/60 p-5 sm:p-8 md:p-12 rounded-2xl md:rounded-3xl shadow-xl shadow-emerald-900/5 mx-2'>
+        <div className='max-w-3xl text-center space-y-5 md:space-y-8 mb-12 md:mb-24 bg-white/75 backdrop-blur-lg border border-white/45 p-5 sm:p-8 md:p-12 rounded-2xl md:rounded-3xl shadow-2xl shadow-slate-900/10 mx-2'>
           <span className='inline-flex items-center gap-1.5 py-1 px-3 md:py-1.5 md:px-4 rounded-full text-[10px] md:text-xs font-semibold bg-emerald-100 text-emerald-800 uppercase tracking-wider shadow-sm'>
             🌴 Your Travel, Your Way
           </span>
@@ -164,7 +163,7 @@ function Hero() {
       </div>
 
       {/* How it Works Section */}
-      <div className='w-full py-10 px-4 sm:py-20 sm:px-16 lg:px-32 bg-white border-t border-gray-100'>
+      <div id="how-it-works" className='w-full py-10 px-4 sm:py-20 sm:px-16 lg:px-32 bg-white border-t border-gray-100 scroll-mt-20'>
         <div className='max-w-6xl mx-auto space-y-8 md:space-y-12'>
           <div className='text-center space-y-3'>
             <h2 className='text-2xl md:text-4xl font-extrabold text-gray-955 tracking-tight'>
@@ -185,7 +184,7 @@ function Hero() {
                   </div>
                   <div className='space-y-2'>
                     <h3 className='text-lg md:text-xl font-bold text-gray-900'>{step.title}</h3>
-                    <p className='text-gray-505 leading-relaxed text-xs md:text-sm'>{step.description}</p>
+                    <p className='text-gray-550 leading-relaxed text-xs md:text-sm'>{step.description}</p>
                   </div>
                 </div>
               );
@@ -195,7 +194,7 @@ function Hero() {
       </div>
 
       {/* Features Grid Section */}
-      <div className='w-full py-10 px-4 sm:py-20 sm:px-16 lg:px-32 bg-slate-50/50 border-t border-b border-gray-100'>
+      <div id="why-choose-us" className='w-full py-10 px-4 sm:py-20 sm:px-16 lg:px-32 bg-slate-50/50 border-t border-b border-gray-100 scroll-mt-20'>
         <div className='max-w-6xl mx-auto space-y-8 md:space-y-12'>
           <div className='text-center space-y-3'>
             <h2 className='text-2xl md:text-4xl font-extrabold text-gray-955 tracking-tight'>
