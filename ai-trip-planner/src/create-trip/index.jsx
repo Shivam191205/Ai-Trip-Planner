@@ -172,12 +172,62 @@ function CreateTrip() {
     setWeatherLoading(true);
     try {
       const apiKey = import.meta.env.VITE_OPENWEATHER_API_KEY;
-      const url = `https://api.openweathermap.org/data/2.5/forecast?q=${encodeURIComponent(locationStr)}&appid=${apiKey}&units=metric`;
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error("Could not fetch weather data");
+      
+      let response;
+      let data;
+      let success = false;
+      
+      // Strategy 1: query with original full location
+      try {
+        const url = `https://api.openweathermap.org/data/2.5/forecast?q=${encodeURIComponent(locationStr)}&appid=${apiKey}&units=metric`;
+        response = await fetch(url);
+        if (response.ok) {
+          data = await response.json();
+          success = true;
+        }
+      } catch (e) {
+        console.warn("Failed fetching weather with full location, trying fallback", e);
       }
-      const data = await response.json();
+      
+      // Strategy 2: query with cleaned location (split by comma and take last 2 segments, e.g. "Paris, France")
+      if (!success) {
+        const parts = locationStr.split(",").map(p => p.trim()).filter(Boolean);
+        if (parts.length > 1) {
+          const cleanedStr = parts.slice(-2).join(", ");
+          const url = `https://api.openweathermap.org/data/2.5/forecast?q=${encodeURIComponent(cleanedStr)}&appid=${apiKey}&units=metric`;
+          response = await fetch(url);
+          if (response.ok) {
+            data = await response.json();
+            success = true;
+          }
+        }
+      }
+      
+      // Strategy 3: query with city name (second to last segment, or first segment)
+      if (!success) {
+        const parts = locationStr.split(",").map(p => p.trim()).filter(Boolean);
+        if (parts.length > 0) {
+          const cityOption1 = parts.length >= 2 ? parts[parts.length - 2] : parts[0];
+          const url = `https://api.openweathermap.org/data/2.5/forecast?q=${encodeURIComponent(cityOption1)}&appid=${apiKey}&units=metric`;
+          response = await fetch(url);
+          if (response.ok) {
+            data = await response.json();
+            success = true;
+          } else if (parts.length > 2) {
+            const cityOption2 = parts[0];
+            const url2 = `https://api.openweathermap.org/data/2.5/forecast?q=${encodeURIComponent(cityOption2)}&appid=${apiKey}&units=metric`;
+            const response2 = await fetch(url2);
+            if (response2.ok) {
+              data = await response2.json();
+              success = true;
+            }
+          }
+        }
+      }
+      
+      if (!success || !data) {
+        throw new Error("Could not fetch weather data from any fallback");
+      }
       
       const dailyForecasts = {};
       data.list.forEach((item) => {
