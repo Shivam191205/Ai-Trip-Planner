@@ -172,6 +172,9 @@ function CreateTrip() {
     setWeatherLoading(true);
     try {
       const apiKey = import.meta.env.VITE_OPENWEATHER_API_KEY;
+      if (!apiKey) {
+        throw new Error("OpenWeather API key is undefined. Please verify VITE_OPENWEATHER_API_KEY exists in your .env.local file and restart your Vite dev server.");
+      }
       
       let response;
       let data;
@@ -270,7 +273,7 @@ function CreateTrip() {
       setOpenWeatherDialog(true);
     } catch (error) {
       console.error(error);
-      toast.error("Failed to load weather forecast.");
+      toast.error(`Failed to load weather forecast: ${error.message || error}`);
     } finally {
       setWeatherLoading(false);
     }
