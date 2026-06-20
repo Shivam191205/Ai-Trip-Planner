@@ -6,7 +6,7 @@ import axios from 'axios'
 import { LogOut, Compass, FolderHeart, Plus, Menu, X } from 'lucide-react'
 
 function Header() {
-  const [user, setUser] = useState(JSON.parse(localStorage.getItem("user")));
+  const [user, setUser] = useState(JSON.parse(localStorage.getItem("user")) || (import.meta.env.DEV ? { email: "dev@example.com", name: "Dev User", picture: "https://lh3.googleusercontent.com/a/default-user" } : null));
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const dropdownRef = useRef(null);

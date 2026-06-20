@@ -40,6 +40,10 @@ function CreateTrip() {
   const route=useNavigate();
   const [searchParams] = useSearchParams();
 
+  const [weatherData, setWeatherData] = useState(null);
+  const [weatherLoading, setWeatherLoading] = useState(false);
+  const [openWeatherDialog, setOpenWeatherDialog] = useState(false);
+
   useEffect(() => {
     const destination = searchParams.get('destination');
     const days = searchParams.get('days');
@@ -132,10 +136,100 @@ function CreateTrip() {
     handleGenerateTrip(updatedData);
   };
 
+  const handleCheckWeather = async () => {
+    if (!startDate) {
+      toast.error("Please select your travel start date first.");
+      return;
+    }
+    const locationStr = formData?.location;
+    if (!locationStr) {
+      toast.error("Please enter a travel destination first.");
+      return;
+    }
+
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    const selected = new Date(startDate);
+    selected.setHours(0,0,0,0);
+    const diffTime = selected.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays < 0) {
+      toast.error("Cannot check weather for past dates.");
+      return;
+    }
+
+    if (diffDays > 14) {
+      toast.error("Dates are too far, can't show weather at those days");
+      return;
+    }
+
+    if (diffDays > 5) {
+      toast.info(`Weather forecasting is only available up to 5 days in advance. Your trip starts in ${diffDays} days.`);
+      return;
+    }
+
+    setWeatherLoading(true);
+    try {
+      const apiKey = import.meta.env.VITE_OPENWEATHER_API_KEY;
+      const url = `https://api.openweathermap.org/data/2.5/forecast?q=${encodeURIComponent(locationStr)}&appid=${apiKey}&units=metric`;
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error("Could not fetch weather data");
+      }
+      const data = await response.json();
+      
+      const dailyForecasts = {};
+      data.list.forEach((item) => {
+        const dateStr = item.dt_txt.split(' ')[0]; // YYYY-MM-DD
+        if (!dailyForecasts[dateStr]) {
+          dailyForecasts[dateStr] = {
+            tempSum: 0,
+            count: 0,
+            minTemp: item.main.temp_min,
+            maxTemp: item.main.temp_max,
+            weather: item.weather[0],
+            date: dateStr
+          };
+        }
+        dailyForecasts[dateStr].tempSum += item.main.temp;
+        dailyForecasts[dateStr].count += 1;
+        if (item.main.temp_min < dailyForecasts[dateStr].minTemp) {
+          dailyForecasts[dateStr].minTemp = item.main.temp_min;
+        }
+        if (item.main.temp_max > dailyForecasts[dateStr].maxTemp) {
+          dailyForecasts[dateStr].maxTemp = item.main.temp_max;
+        }
+      });
+
+      const formattedForecast = Object.values(dailyForecasts).map((day) => ({
+        date: day.date,
+        avgTemp: Math.round(day.tempSum / day.count),
+        minTemp: Math.round(day.minTemp),
+        maxTemp: Math.round(day.maxTemp),
+        description: day.weather.description,
+        icon: day.weather.icon,
+        main: day.weather.main
+      }));
+
+      setWeatherData({
+        city: data.city.name,
+        country: data.city.country,
+        forecast: formattedForecast
+      });
+      setOpenWeatherDialog(true);
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to load weather forecast.");
+    } finally {
+      setWeatherLoading(false);
+    }
+  };
+
   const handleGenerateTrip = async (dataToUse) => {
     const actualData = (dataToUse && !dataToUse.target && !dataToUse.preventDefault) ? dataToUse : formData;
     
-    const user = localStorage.getItem("user");
+    const user = localStorage.getItem("user") || (import.meta.env.DEV ? JSON.stringify({ email: "dev@example.com", name: "Dev User", picture: "https://lh3.googleusercontent.com/a/default-user" }) : null);
     if (!user) {
       setOpenDialog(true);
       return;
@@ -409,13 +503,88 @@ function CreateTrip() {
               </div>
             )}
 
-            <Button
-              type="submit"
-              className="w-full mt-4 bg-gradient-to-r from-emerald-600 to-indigo-600 hover:from-emerald-700 hover:to-indigo-700 text-white font-bold py-4 rounded-xl cursor-pointer shadow-md transition-all hover:scale-[1.01]"
-            >
-              Confirm & Generate Trip ✨
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-3 mt-4">
+              <Button
+                type="button"
+                onClick={handleCheckWeather}
+                disabled={weatherLoading}
+                className="flex-1 bg-amber-500 hover:bg-amber-600 text-white font-bold py-4 rounded-xl cursor-pointer shadow-sm transition-all hover:scale-[1.01] flex items-center justify-center gap-1.5"
+              >
+                {weatherLoading ? (
+                  <AiOutlineLoading3Quarters className="w-5 h-5 animate-spin" />
+                ) : (
+                  <>🌦️ Check Weather</>
+                )}
+              </Button>
+              <Button
+                type="submit"
+                className="flex-1 bg-gradient-to-r from-emerald-600 to-indigo-600 hover:from-emerald-700 hover:to-indigo-700 text-white font-bold py-4 rounded-xl cursor-pointer shadow-md transition-all hover:scale-[1.01]"
+              >
+                Confirm & Generate ✨
+              </Button>
+            </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={openWeatherDialog} onOpenChange={setOpenWeatherDialog}>
+        <DialogContent className="glass-panel border-white/60 shadow-2xl rounded-3xl max-w-lg w-full max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-black text-gray-900 text-center flex items-center justify-center gap-2">
+              🌦️ 5-Day Weather Forecast
+            </DialogTitle>
+            <DialogDescription className="text-gray-500 text-sm text-center mt-1">
+              Live weather forecast for <span className="font-bold text-gray-800">{weatherData?.city}, {weatherData?.country}</span>
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="mt-6 flex flex-col gap-4">
+            {weatherData?.forecast && weatherData.forecast.length > 0 ? (
+              <div className="flex flex-col gap-3">
+                {weatherData.forecast.slice(0, 5).map((day, index) => {
+                  const formattedDate = new Date(day.date).toLocaleDateString('en-US', {
+                    weekday: 'short',
+                    month: 'short',
+                    day: 'numeric'
+                  });
+
+                  return (
+                    <div 
+                      key={day.date} 
+                      className="flex items-center justify-between p-4 bg-white/70 border border-gray-100 rounded-2xl hover:shadow-md transition-all duration-200"
+                    >
+                      <div className="flex flex-col">
+                        <span className="font-bold text-gray-800 text-base">{formattedDate}</span>
+                        <span className="text-xs text-gray-500 capitalize">{day.description}</span>
+                      </div>
+                      
+                      <div className="flex items-center gap-3">
+                        <img 
+                          src={`https://openweathermap.org/img/wn/${day.icon}@2x.png`} 
+                          alt={day.main}
+                          className="w-12 h-12 object-contain"
+                        />
+                        <div className="text-right">
+                          <span className="text-lg font-black text-gray-955">{day.avgTemp}°C</span>
+                          <p className="text-[10px] text-gray-400">H: {day.maxTemp}° L: {day.minTemp}°</p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-center text-gray-500">No forecast data available.</p>
+            )}
+
+            <Button
+              type="button"
+              onClick={() => setOpenWeatherDialog(false)}
+              className="w-full mt-4 bg-[#0B1E36] hover:bg-[#152e4d] text-white font-bold py-4 rounded-xl cursor-pointer transition-all hover:scale-[1.01]"
+            >
+              Close Forecast
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

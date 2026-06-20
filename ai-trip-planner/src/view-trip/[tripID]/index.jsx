@@ -4,6 +4,7 @@ import { getDoc, doc } from 'firebase/firestore';
 import { db } from '@/service/firebaseConfig';
 import { toast } from 'sonner'
 import InfoSection from '../components/InfoSection';
+import WeatherForecast from '../components/WeatherForecast';
 import Hotels from '../components/Hotels';
 import PlacesToVisit from '../components/PlacesToVisit';
 import html2canvas from 'html2canvas-pro';
@@ -14,6 +15,140 @@ function ViewTrip() {
   const [trip, setTrip] = useState(null);
   const [isPrinting, setIsPrinting] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [weatherData, setWeatherData] = useState(null);
+  const [weatherLoading, setWeatherLoading] = useState(false);
+
+  useEffect(() => {
+    if (trip?.userSelection?.location) {
+      getWeatherData(trip.userSelection.location);
+    }
+  }, [trip]);
+
+  const getWeatherData = async (locationStr) => {
+    setWeatherLoading(true);
+    try {
+      const apiKey = import.meta.env.VITE_OPENWEATHER_API_KEY;
+      if (!apiKey) {
+        console.warn("OpenWeather API key not found");
+        return;
+      }
+      
+      let response;
+      let data;
+      let success = false;
+      
+      // Strategy 1: query with original full location
+      try {
+        const url = `https://api.openweathermap.org/data/2.5/forecast?q=${encodeURIComponent(locationStr)}&appid=${apiKey}&units=metric`;
+        response = await fetch(url);
+        if (response.ok) {
+          data = await response.json();
+          success = true;
+        }
+      } catch (e) {
+        console.warn("Failed fetching weather with full location, trying fallback", e);
+      }
+      
+      // Strategy 2: query with cleaned location (split by comma and take last 2 segments, e.g. "Paris, France")
+      if (!success) {
+        const parts = locationStr.split(",").map(p => p.trim()).filter(Boolean);
+        if (parts.length > 1) {
+          const cleanedStr = parts.slice(-2).join(", ");
+          const url = `https://api.openweathermap.org/data/2.5/forecast?q=${encodeURIComponent(cleanedStr)}&appid=${apiKey}&units=metric`;
+          response = await fetch(url);
+          if (response.ok) {
+            data = await response.json();
+            success = true;
+          }
+        }
+      }
+      
+      // Strategy 3: query with city name (second to last segment, or first segment)
+      if (!success) {
+        const parts = locationStr.split(",").map(p => p.trim()).filter(Boolean);
+        if (parts.length > 0) {
+          const cityOption1 = parts.length >= 2 ? parts[parts.length - 2] : parts[0];
+          const url = `https://api.openweathermap.org/data/2.5/forecast?q=${encodeURIComponent(cityOption1)}&appid=${apiKey}&units=metric`;
+          response = await fetch(url);
+          if (response.ok) {
+            data = await response.json();
+            success = true;
+          } else if (parts.length > 2) {
+            const cityOption2 = parts[0];
+            const url2 = `https://api.openweathermap.org/data/2.5/forecast?q=${encodeURIComponent(cityOption2)}&appid=${apiKey}&units=metric`;
+            const response2 = await fetch(url2);
+            if (response2.ok) {
+              data = await response2.json();
+              success = true;
+            }
+          }
+        }
+      }
+      
+      if (!success || !data) {
+        console.warn("Could not fetch weather data from any fallback");
+        return;
+      }
+
+      const dailyForecasts = {};
+      data.list.forEach((item) => {
+        const dateStr = item.dt_txt.split(' ')[0]; // YYYY-MM-DD
+        if (!dailyForecasts[dateStr]) {
+          dailyForecasts[dateStr] = {
+            tempSum: 0,
+            count: 0,
+            minTemp: item.main.temp_min,
+            maxTemp: item.main.temp_max,
+            weather: item.weather[0],
+            date: dateStr,
+            humiditySum: 0,
+            windSum: 0
+          };
+        }
+        dailyForecasts[dateStr].tempSum += item.main.temp;
+        dailyForecasts[dateStr].count += 1;
+        dailyForecasts[dateStr].humiditySum += item.main.humidity;
+        dailyForecasts[dateStr].windSum += item.wind.speed;
+        if (item.main.temp_min < dailyForecasts[dateStr].minTemp) {
+          dailyForecasts[dateStr].minTemp = item.main.temp_min;
+        }
+        if (item.main.temp_max > dailyForecasts[dateStr].maxTemp) {
+          dailyForecasts[dateStr].maxTemp = item.main.temp_max;
+        }
+      });
+
+      const formattedForecast = Object.values(dailyForecasts).map((day) => ({
+        date: day.date,
+        avgTemp: Math.round(day.tempSum / day.count),
+        minTemp: Math.round(day.minTemp),
+        maxTemp: Math.round(day.maxTemp),
+        avgHumidity: Math.round(day.humiditySum / day.count),
+        avgWind: Math.round((day.windSum / day.count) * 10) / 10,
+        description: day.weather.description,
+        icon: day.weather.icon,
+        main: day.weather.main
+      }));
+
+      setWeatherData({
+        city: data.city.name,
+        country: data.city.country,
+        forecast: formattedForecast,
+        current: {
+          temp: Math.round(data.list[0].main.temp),
+          feels_like: Math.round(data.list[0].main.feels_like),
+          description: data.list[0].weather[0].description,
+          icon: data.list[0].weather[0].icon,
+          main: data.list[0].weather[0].main,
+          humidity: data.list[0].main.humidity,
+          wind: data.list[0].wind.speed
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching weather forecast:", error);
+    } finally {
+      setWeatherLoading(false);
+    }
+  };
 
   const parseTripData = (tripData) => {
     if (!tripData) return null;
@@ -129,8 +264,14 @@ function ViewTrip() {
           onDownloadPDF={handleDownloadPDF} 
           pdfLoading={pdfLoading} 
         />
+        <WeatherForecast 
+          weatherData={weatherData} 
+          loading={weatherLoading} 
+          isPrinting={isPrinting} 
+          trip={trip}
+        />
         <Hotels trip={trip} isPrinting={isPrinting} />
-        <PlacesToVisit trip={trip} isPrinting={isPrinting} />
+        <PlacesToVisit trip={trip} isPrinting={isPrinting} weatherData={weatherData} />
       </div>
 
       {pdfLoading && (

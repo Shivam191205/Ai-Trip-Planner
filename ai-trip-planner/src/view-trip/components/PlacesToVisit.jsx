@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { searchPexelsImage } from '@/service/PexelsAPI'
 
-function PlacesToVisit({ trip, isPrinting }) {
+function PlacesToVisit({ trip, isPrinting, weatherData }) {
   const DUMMY_IMAGE = "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?auto=format&fit=crop&w=600&q=80";
   
   const isImageValid = (url) => {
@@ -15,6 +15,22 @@ function PlacesToVisit({ trip, isPrinting }) {
   const [selectedDay, setSelectedDay] = useState(0);
   const [placeImageUrls, setPlaceImageUrls] = useState({});
   const [coverImageUrl, setCoverImageUrl] = useState("");
+
+  const getDayWeather = (dayIdx) => {
+    const startDateStr = trip?.userSelection?.startDate;
+    if (!startDateStr || !weatherData?.forecast) return null;
+    
+    try {
+      const date = new Date(startDateStr);
+      date.setDate(date.getDate() + dayIdx);
+      const targetDateStr = date.toISOString().split('T')[0];
+      
+      return weatherData.forecast.find(d => d.date === targetDateStr);
+    } catch (e) {
+      console.error("Error calculating day weather:", e);
+      return null;
+    }
+  };
 
   useEffect(() => {
     if (!itinerary?.length) return;
@@ -129,9 +145,21 @@ function PlacesToVisit({ trip, isPrinting }) {
                     <img src={dayCover} alt={theme} className='w-full h-full object-cover' />
                   </div>
                   <div>
-                    <span className='bg-emerald-100 text-emerald-800 text-xs font-bold px-3 py-1 rounded-full'>
-                      Day {day} Focus
-                    </span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className='bg-emerald-100 text-emerald-808 text-xs font-bold px-3 py-1 rounded-full'>
+                        Day {day} Focus
+                      </span>
+                      {getDayWeather(index) && (
+                        <span className='bg-amber-50 text-amber-800 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border border-amber-200 flex items-center gap-1 shrink-0'>
+                          <img 
+                            src={`https://openweathermap.org/img/wn/${getDayWeather(index).icon}.png`} 
+                            alt={getDayWeather(index).main}
+                            className="w-3.5 h-3.5 object-contain"
+                          />
+                          {getDayWeather(index).avgTemp}°C — <span className="capitalize">{getDayWeather(index).description}</span>
+                        </span>
+                      )}
+                    </div>
                     <h3 className='text-2xl font-extrabold text-slate-800 mt-2'>{theme}</h3>
                   </div>
                 </div>
@@ -224,19 +252,30 @@ function PlacesToVisit({ trip, isPrinting }) {
           <div className='transition-all duration-300 ease-out'>
             {/* Day Selector */}
             <div className='flex flex-wrap gap-2 mb-6 pb-4 border-b border-slate-100'>
-              {itinerary.map((dayItem, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setSelectedDay(idx)}
-                  className={`px-5 py-2.5 rounded-xl font-semibold text-sm transition-all cursor-pointer ${
-                    selectedDay === idx
-                      ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/10'
-                      : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
-                  }`}
-                >
-                  Day {dayItem?.day || idx + 1}
-                </button>
-              ))}
+              {itinerary.map((dayItem, idx) => {
+                const dayWeather = getDayWeather(idx);
+                return (
+                  <button
+                    key={idx}
+                    onClick={() => setSelectedDay(idx)}
+                    className={`px-5 py-2.5 rounded-xl font-semibold text-sm transition-all cursor-pointer flex items-center gap-1.5 ${
+                      selectedDay === idx
+                        ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/10'
+                        : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    Day {dayItem?.day || idx + 1}
+                    {dayWeather && (
+                      <img 
+                        src={`https://openweathermap.org/img/wn/${dayWeather.icon}.png`}
+                        alt={dayWeather.main}
+                        className="w-4 h-4 object-contain shrink-0"
+                        title={`${dayWeather.avgTemp}°C — ${dayWeather.description}`}
+                      />
+                    )}
+                  </button>
+                );
+              })}
             </div>
 
             {/* Selected Day Content */}
@@ -250,9 +289,21 @@ function PlacesToVisit({ trip, isPrinting }) {
                   />
                 </div>
                 <div className='flex-1'>
-                  <span className='bg-emerald-50 text-emerald-700 text-xs font-bold px-3 py-1 rounded-full border border-emerald-100'>
-                    Day {day} Focus
-                  </span>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className='bg-emerald-50 text-emerald-700 text-xs font-bold px-3 py-1 rounded-full border border-emerald-100'>
+                      Day {day} Focus
+                    </span>
+                    {getDayWeather(selectedDay) && (
+                      <span className='bg-amber-50 text-amber-800 text-xs font-extrabold px-3 py-1 rounded-full border border-amber-200/55 flex items-center gap-1 shadow-2xs shrink-0'>
+                        <img 
+                          src={`https://openweathermap.org/img/wn/${getDayWeather(selectedDay).icon}.png`} 
+                          alt={getDayWeather(selectedDay).main}
+                          className="w-4 h-4 object-contain"
+                        />
+                        {getDayWeather(selectedDay).avgTemp}°C — <span className="capitalize">{getDayWeather(selectedDay).description}</span>
+                      </span>
+                    )}
+                  </div>
                   <h3 className='text-xl md:text-2xl font-extrabold text-slate-800 mt-2'>{theme}</h3>
                 </div>
               </div>
