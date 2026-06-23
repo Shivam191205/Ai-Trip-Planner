@@ -14,9 +14,9 @@ const PORT = process.env.PORT || 5000;
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 const MODELS = [
+  "gemini-2.5-flash-lite",
   "gemini-3.5-flash",
   "gemini-2.5-flash",
-  "gemini-2.5-flash-lite",
   "gemini-2.0-flash",
   "gemini-2.0-flash-lite"
 ];
@@ -29,7 +29,7 @@ const generationConfig = {
   responseMimeType: "application/json",
 };
 
-const MAX_RETRIES = 3;
+const MAX_RETRIES = 0;
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // Caches
