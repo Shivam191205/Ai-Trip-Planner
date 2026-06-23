@@ -2,6 +2,8 @@ const express = require("express");
 const cors = require("cors");
 const axios = require("axios");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+const fs = require("fs");
+const path = require("path");
 require("dotenv").config();
 
 const app = express();
@@ -32,9 +34,33 @@ const generationConfig = {
 const MAX_RETRIES = 0;
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+const TRIP_CACHE_FILE = path.join(__dirname, "trip-cache.json");
+const PEXELS_CACHE_FILE = path.join(__dirname, "pexels-cache.json");
+
+function loadCache(filePath) {
+  try {
+    if (fs.existsSync(filePath)) {
+      const raw = fs.readFileSync(filePath, "utf8");
+      return new Map(JSON.parse(raw));
+    }
+  } catch (error) {
+    console.error(`[Cache] Error loading cache from ${filePath}:`, error.message);
+  }
+  return new Map();
+}
+
+function saveCache(filePath, cacheMap) {
+  try {
+    const serialized = JSON.stringify(Array.from(cacheMap.entries()), null, 2);
+    fs.writeFileSync(filePath, serialized, "utf8");
+  } catch (error) {
+    console.error(`[Cache] Error saving cache to ${filePath}:`, error.message);
+  }
+}
+
 // Caches
-const tripCache = new Map();
-const pexelsCache = new Map();
+const tripCache = loadCache(TRIP_CACHE_FILE);
+const pexelsCache = loadCache(PEXELS_CACHE_FILE);
 const pexelsUsedUrls = new Set();
 
 // Helper functions for Gemini errors
@@ -129,6 +155,7 @@ app.post("/api/generate-trip", async (req, res) => {
           
           // Store in cache
           tripCache.set(cacheKey, parsedData);
+          saveCache(TRIP_CACHE_FILE, tripCache);
           return res.json({ source: "api", data: parsedData });
         }
       } catch (error) {
@@ -251,6 +278,7 @@ app.get("/api/pexels-image", async (req, res) => {
 
   if (url) {
     pexelsCache.set(cacheKey, url);
+    saveCache(PEXELS_CACHE_FILE, pexelsCache);
   }
 
   res.json({ source: "api", url: url || "" });

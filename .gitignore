@@ -13,6 +13,7 @@ ai-trip-planner/dist/
 .env.*.local
 server/.env
 ai-trip-planner/.env.local
+server/*-cache.json
 
 # IDEs & System files
 .vscode/
