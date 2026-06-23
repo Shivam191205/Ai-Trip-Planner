@@ -14,7 +14,11 @@ const PORT = process.env.PORT || 5000;
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 const MODELS = [
-  "gemini-2.5-flash"
+  "gemini-3.5-flash",
+  "gemini-2.5-flash",
+  "gemini-2.5-flash-lite",
+  "gemini-2.0-flash",
+  "gemini-2.0-flash-lite"
 ];
 
 const generationConfig = {
@@ -47,6 +51,12 @@ function isSpikeOrTransientError(error) {
     "temporarily unavailable", "service unavailable", "try again later", "transient"
   ];
   return transientKeywords.some(keyword => message.includes(keyword));
+}
+
+function isQuotaExceededError(error) {
+  if (!error) return false;
+  const message = (error.message || String(error)).toLowerCase();
+  return message.includes("quota exceeded") || message.includes("exceeded your current quota") || message.includes("exceeded quota");
 }
 
 function isFatalNonTransientError(error) {
@@ -127,6 +137,11 @@ app.post("/api/generate-trip", async (req, res) => {
         if (isFatalNonTransientError(error)) {
           console.error(`[Gemini Proxy] Fatal error on model ${modelName}:`, error.message || error);
           return res.status(error.status || 400).json({ error: error.message || String(error) });
+        }
+
+        if (isQuotaExceededError(error)) {
+          console.warn(`[Gemini Proxy] Quota exceeded for model ${modelName}. Skipping retries.`);
+          break;
         }
 
         // For all other errors, retry up to MAX_RETRIES times with exponential backoff
