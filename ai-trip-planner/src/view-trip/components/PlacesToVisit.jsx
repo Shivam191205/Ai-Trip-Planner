@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { searchPexelsImage } from '@/service/PexelsAPI'
 
-function PlacesToVisit({ trip, isPrinting, weatherData }) {
+function PlacesToVisit({ trip, isPrinting, weatherData, loading }) {
   const DUMMY_IMAGE = "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?auto=format&fit=crop&w=600&q=80";
   
   const isImageValid = (url) => {
@@ -9,6 +9,21 @@ function PlacesToVisit({ trip, isPrinting, weatherData }) {
     const lower = url.toLowerCase();
     return lower.includes('pexels.com') || lower.includes('unsplash.com');
   };
+
+  if (loading) {
+    return (
+      <div className='mt-8 px-4 sm:px-0'>
+        <h2 className='font-extrabold text-2xl text-gray-900 flex items-center gap-2 mb-6'>
+          <span className='bg-emerald-100 text-emerald-700 w-8 h-8 rounded-lg flex items-center justify-center text-sm shadow-xs animate-pulse'>🗺️</span> Places to Visit
+        </h2>
+        <div className='space-y-4 p-6 bg-slate-50/50 rounded-3xl border border-slate-100/50 flex flex-col items-center justify-center py-12 text-center'>
+          <div className='w-10 h-10 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin'></div>
+          <h3 className='font-bold text-slate-800 text-lg mt-3'>AI is mapping your itinerary...</h3>
+          <p className='text-xs text-slate-500 max-w-sm'>Calculating the best travel routes, selecting local cuisines, and planning day-by-day sights for you.</p>
+        </div>
+      </div>
+    );
+  }
 
   const itinerary = trip?.tripData?.itinerary || trip?.tripData?.Itinerary;
   const [isItineraryOpen, setIsItineraryOpen] = useState(false);

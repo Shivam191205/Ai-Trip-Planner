@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { getDoc, doc } from 'firebase/firestore';
+import { getDoc, doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/service/firebaseConfig';
 import { toast } from 'sonner'
+import { chatSession } from '@/service/AImodel';
+import { AI_PROMPT_ITINERARY } from '@/constants/options';
 import InfoSection from '../components/InfoSection';
 import WeatherForecast from '../components/WeatherForecast';
 import Hotels from '../components/Hotels';
@@ -17,6 +19,7 @@ function ViewTrip() {
   const [pdfLoading, setPdfLoading] = useState(false);
   const [weatherData, setWeatherData] = useState(null);
   const [weatherLoading, setWeatherLoading] = useState(false);
+  const [itineraryLoading, setItineraryLoading] = useState(false);
 
   useEffect(() => {
     if (trip?.userSelection?.location) {
@@ -160,10 +163,16 @@ function ViewTrip() {
       raw = codeBlockMatch[1].trim();
     }
 
-    const firstBrace = raw.indexOf('{');
-    const lastBrace = raw.lastIndexOf('}');
-    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-      raw = raw.slice(firstBrace, lastBrace + 1);
+    let firstChar = raw.indexOf('{');
+    let lastChar = raw.lastIndexOf('}');
+    const firstArray = raw.indexOf('[');
+    const lastArray = raw.lastIndexOf(']');
+    if (firstArray !== -1 && (firstChar === -1 || firstArray < firstChar)) {
+      firstChar = firstArray;
+      lastChar = lastArray;
+    }
+    if (firstChar !== -1 && lastChar !== -1 && lastChar > firstChar) {
+      raw = raw.slice(firstChar, lastChar + 1);
     }
 
     try {
@@ -187,13 +196,57 @@ function ViewTrip() {
             const data = docSnap.data();
             console.log("Document data:", data);
             const parsedTripData = parseTripData(data.tripData);
-            setTrip({ ...data, tripData: parsedTripData ?? data.tripData });
+            const fullTrip = { ...data, tripData: parsedTripData ?? data.tripData };
+            setTrip(fullTrip);
+
+            // If itinerary doesn't exist, generate it in the background
+            if (!parsedTripData?.itinerary || parsedTripData.itinerary.length === 0) {
+              generateItineraryInBackground(parsedTripData ?? data.tripData, data.userSelection);
+            }
         }else{
             console.log("No such document!");
             toast('No trip found')
         }
-        //fetch data from firebase using tripID
     }
+
+    const generateItineraryInBackground = async (currentTripData, userSelection) => {
+      setItineraryLoading(true);
+      try {
+        const FINAL_PROMPT = AI_PROMPT_ITINERARY.replaceAll('{location}', userSelection?.location)
+          .replace('{days}', userSelection?.days)
+          .replace('{traveller}', userSelection?.traveller)
+          .replace('{budget}', userSelection?.budget);
+
+        console.log("Generating itinerary in background...");
+        const result = await chatSession.sendMessage(FINAL_PROMPT);
+        const textResponse = result.response.text();
+
+        const parsedItinerary = parseTripData(textResponse);
+        if (parsedItinerary) {
+          const updatedTripData = {
+            ...currentTripData,
+            itinerary: parsedItinerary
+          };
+          const docRef = doc(db, "trips", tripID);
+          await updateDoc(docRef, {
+            tripData: updatedTripData
+          });
+
+          setTrip(prev => ({
+            ...prev,
+            tripData: updatedTripData
+          }));
+          toast.success("Itinerary generated successfully!");
+        } else {
+          throw new Error("Parsed itinerary is empty");
+        }
+      } catch (error) {
+        console.error("Failed to generate itinerary:", error);
+        toast.error("Failed to generate detailed itinerary. Please try reloading.");
+      } finally {
+        setItineraryLoading(false);
+      }
+    };
   const handleDownloadPDF = async () => {
     setPdfLoading(true);
     setIsPrinting(true);
@@ -271,7 +324,7 @@ function ViewTrip() {
           trip={trip}
         />
         <Hotels trip={trip} isPrinting={isPrinting} />
-        <PlacesToVisit trip={trip} isPrinting={isPrinting} weatherData={weatherData} />
+        <PlacesToVisit trip={trip} isPrinting={isPrinting} weatherData={weatherData} loading={itineraryLoading} />
       </div>
 
       {pdfLoading && (

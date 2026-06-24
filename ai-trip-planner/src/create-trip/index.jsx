@@ -11,7 +11,7 @@ import "@geoapify/geocoder-autocomplete/styles/minimal.css";
 import { chatSession } from '@/service/AImodel';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner'
-import { AI_PROMPT } from '@/constants/options';
+import { AI_PROMPT_BASIC } from '@/constants/options';
 import {
   Dialog,
   DialogContent,
@@ -305,7 +305,7 @@ function CreateTrip() {
 
     setLoading(true);
     try {
-      const FINAL_PROMPT = AI_PROMPT.replaceAll('{location}', actualData?.location)
+      const FINAL_PROMPT = AI_PROMPT_BASIC.replaceAll('{location}', actualData?.location)
         .replace('{days}', actualData?.days)
         .replace('{traveller}', actualData?.traveller)
         .replace('{budget}', actualData?.budget)

@@ -145,10 +145,16 @@ app.post("/api/generate-trip", async (req, res) => {
           if (codeBlockMatch) {
             raw = codeBlockMatch[1].trim();
           }
-          const firstBrace = raw.indexOf('{');
-          const lastBrace = raw.lastIndexOf('}');
-          if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-            raw = raw.slice(firstBrace, lastBrace + 1);
+          let firstChar = raw.indexOf('{');
+          let lastChar = raw.lastIndexOf('}');
+          const firstArray = raw.indexOf('[');
+          const lastArray = raw.lastIndexOf(']');
+          if (firstArray !== -1 && (firstChar === -1 || firstArray < firstChar)) {
+            firstChar = firstArray;
+            lastChar = lastArray;
+          }
+          if (firstChar !== -1 && lastChar !== -1 && lastChar > firstChar) {
+            raw = raw.slice(firstChar, lastChar + 1);
           }
 
           const parsedData = JSON.parse(raw);

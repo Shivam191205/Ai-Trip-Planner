@@ -50,8 +50,8 @@ export const SelectBudgetOptions = [
   }
 ];
 
-export const AI_PROMPT = `
-Generate a travel plan in STRICT JSON format only.
+export const AI_PROMPT_BASIC = `
+Generate a travel plan summary in STRICT JSON format only.
 
 Location: {location}
 Duration: {days} Days
@@ -94,49 +94,73 @@ Use this exact JSON structure:
       "rating": 0,
       "description": "string"
     }
-  ],
-
-  "itinerary": [
-    {
-      "day": 1,
-      "theme": "string",
-
-      "places": [
-        {
-          "place_name": "string",
-          "details": "string",
-          "image_url": "string",
-
-          "geo_coordinates": {
-            "latitude": 0,
-            "longitude": 0
-          },
-
-          "ticket_pricing": "string",
-          "travel_time_from_previous_location": "string",
-          "time_to_spend": "string",
-          "best_time_to_visit": "string"
-        }
-      ],
-
-      "lunch_option": {
-        "restaurant_name": "string",
-        "cuisine": "string",
-        "best_time_to_visit": "string",
-        "budget_level": "string"
-      },
-
-      "dinner_option": {
-        "restaurant_name": "string",
-        "cuisine": "string",
-        "best_time_to_visit": "string",
-        "budget_level": "string"
-      }
-    }
   ]
 }
-  Give 4 to 5 hotel options with details like name, address, price range per night, image url, geo coordinates, rating and a brief description.
-  For the itinerary, provide a day-wise breakdown of activities. Each day should have a theme (e.g., adventure, culture, relaxation) and a list of places to visit with details like name, description, image url, geo coordinates, ticket pricing, travel time from the previous location, recommended time to spend at each place, and the best time to visit. Also include one lunch and one dinner restaurant recommendation for each day with details like name, cuisine type, best time to visit, and budget level.
-  Give me exact image url and not any example url. The image should be relevant to the place or hotel. Do not return any placeholder url. If you do not have an exact image url.
+Give 4 to 5 hotel options with details like name, address, price range per night, image url, geo coordinates, rating and a brief description.
+Give me exact image url and not any example url. The image should be relevant to the place or hotel. Do not return any placeholder url. If you do not have an exact image url.
+`;
 
+export const AI_PROMPT_ITINERARY = `
+Generate a detailed day-wise itinerary in STRICT JSON format only.
+
+Location: {location}
+Duration: {days} Days
+Traveler: {traveller}
+Budget: {budget}
+
+IMPORTANT RULES:
+1. Return ONLY valid JSON
+2. Do not add markdown
+3. Do not add \`\`\`
+4. Do not add explanations
+5. Use double quotes for all keys and string values
+6. Do not use unescaped quotes inside strings
+7. Ensure all arrays and objects are properly closed
+8. Return parsable JSON only
+9. If an image URL is unavailable, return an empty string ""
+10. Never truncate the JSON response
+
+Use this exact JSON structure (return only the array of days):
+
+[
+  {
+    "day": 1,
+    "theme": "string",
+
+    "places": [
+      {
+        "place_name": "string",
+        "details": "string",
+        "image_url": "string",
+
+        "geo_coordinates": {
+          "latitude": 0,
+          "longitude": 0
+        },
+
+        "ticket_pricing": "string",
+        "travel_time_from_previous_location": "string",
+        "time_to_spend": "string",
+        "best_time_to_visit": "string"
+      }
+    ],
+
+    "lunch_option": {
+      "restaurant_name": "string",
+      "cuisine": "string",
+      "best_time_to_visit": "string",
+      "budget_level": "string"
+    },
+
+    "dinner_option": {
+      "restaurant_name": "string",
+      "cuisine": "string",
+      "best_time_to_visit": "string",
+      "budget_level": "string"
+    }
+  }
+]
+
+For the itinerary, provide a day-wise breakdown of activities. Each day should have a theme (e.g., adventure, culture, relaxation) and a list of places to visit with details like name, description, image url, geo coordinates, ticket pricing, travel time from the previous location, recommended time to spend at each place, and the best time to visit. Also include one lunch and one dinner restaurant recommendation for each day with details like name, cuisine type, best time to visit, and budget level.
+Give me exact image url and not any example url. The image should be relevant to the place or hotel. Do not return any placeholder url. If you do not have an exact image url.
 `;
