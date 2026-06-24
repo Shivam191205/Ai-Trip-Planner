@@ -45,6 +45,11 @@ const pexelsUsedUrls = new Set();
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+function getCacheKey(prompt) {
+  const normalized = prompt.toLowerCase().replace(/\s+/g, " ").trim();
+  return `trip-${normalized.substring(0, 100).replace(/[^a-z0-9]/g, "-")}-len-${normalized.length}`;
+}
+
 const AI_PROMPT_BASIC = `
 Generate a travel plan summary in STRICT JSON format only.
 
@@ -91,8 +96,7 @@ Use this exact JSON structure:
     }
   ]
 }
-Give 4 to 5 hotel options with details like name, address, price range per night, image url, geo coordinates, rating and a brief description.
-Give me exact image url and not any example url. The image should be relevant to the place or hotel. Do not return any placeholder url. If you do not have an exact image url.
+Give 4 to 5 hotel options with details like name, address, price range per night, geo coordinates, rating and a brief description.
 `;
 
 const AI_PROMPT_ITINERARY = `
@@ -157,7 +161,7 @@ Use this exact JSON structure (return only the array of days):
 ]
 
 For the itinerary, provide a day-wise breakdown of activities. Each day should have a theme (e.g., adventure, culture, relaxation) and a list of places to visit with details like name, description, image url, geo coordinates, ticket pricing, travel time from the previous location, recommended time to spend at each place, and the best time to visit. Also include one lunch and one dinner restaurant recommendation for each day with details like name, cuisine type, best time to visit, and budget level.
-Give me exact image url and not any example url. The image should be relevant to the place or hotel. Do not return any placeholder url. If you do not have an exact image url.
+
 `;
 
 const destinations = [
@@ -180,7 +184,10 @@ const destinations = [
   "Agra, Uttar Pradesh, India"
 ];
 
-const config = { days: "3", traveller: "Just Me", budget: "Cheap" };
+const configs = [
+  { days: "3", traveller: "Just Me", budget: "Cheap" },
+  { days: "3", traveller: "Family", budget: "Moderate" }
+];
 
 async function fetchPexelsImage(query) {
   if (!PEXELS_API_KEY) return "";
@@ -237,24 +244,130 @@ function parseJSON(responseText) {
 }
 
 async function generateWithGemini(prompt) {
-  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+  const model = genAI.getGenerativeModel({ model: "gemini-3.1-flash-lite" });
   const result = await model.generateContent(prompt);
   return parseJSON(result.response.text());
 }
 
-async function populateDestination(location) {
+function getFrontendTravellerString(t) {
+  if (t === "Family") return "3 to 5 People";
+  if (t === "Just Me") return "1 Person";
+  if (t === "Couple") return "2 People";
+  if (t === "Friends") return "5 to 10 People";
+  return t;
+}
+
+// Migrate existing cache files to the new keys structure without losing data
+function migrateCache() {
+  console.log("Starting cache key format migration...");
+  let migratedTrips = 0;
+  let migratedPexels = 0;
+
+  for (const dest of destinations) {
+    for (const config of configs) {
+      const frontendTraveller = getFrontendTravellerString(config.traveller);
+
+      // 1. Basic Trip Cache Key Migration
+      const basicPrompt = AI_PROMPT_BASIC.replaceAll("{location}", dest)
+        .replace("{days}", config.days)
+        .replace("{traveller}", frontendTraveller)
+        .replace("{budget}", config.budget)
+        .replace("{budget}", config.budget);
+
+      const oldBasicKey = `trip-${basicPrompt.toLowerCase().replace(/\s+/g, " ").trim().substring(0, 100).replace(/[^a-z0-9]/g, "-")}-len-${basicPrompt.length}`;
+      const newBasicKey = getCacheKey(basicPrompt);
+
+      if (tripCache.has(oldBasicKey)) {
+        const val = tripCache.get(oldBasicKey);
+        // Rename key
+        tripCache.delete(oldBasicKey);
+        tripCache.set(newBasicKey, val);
+        migratedTrips++;
+      }
+
+      // 2. Itinerary Cache Key Migration
+      const itineraryPrompt = AI_PROMPT_ITINERARY.replaceAll("{location}", dest)
+        .replace("{days}", config.days)
+        .replace("{traveller}", frontendTraveller)
+        .replace("{budget}", config.budget);
+
+      const oldItineraryKey = `trip-${itineraryPrompt.toLowerCase().replace(/\s+/g, " ").trim().substring(0, 100).replace(/[^a-z0-9]/g, "-")}-len-${itineraryPrompt.length}`;
+      const newItineraryKey = getCacheKey(itineraryPrompt);
+
+      if (tripCache.has(oldItineraryKey)) {
+        const val = tripCache.get(oldItineraryKey);
+        // Rename key
+        tripCache.delete(oldItineraryKey);
+        tripCache.set(newItineraryKey, val);
+        migratedTrips++;
+      }
+
+      // 3. Pexels Hotel Image Cache Migration
+      const basicData = tripCache.get(newBasicKey);
+      if (basicData?.hotels_options) {
+        for (const hotel of basicData.hotels_options) {
+          const oldPexelsQuery = `${hotel.hotel_name || "hotel"} ${dest}`.trim();
+          const oldPexelsKey = `pexels-${oldPexelsQuery.toLowerCase().trim()}`;
+
+          const newPexelsQuery = `${hotel.hotel_name || "hotel"} ${hotel.address || ""}`.trim();
+          const newPexelsKey = `pexels-${newPexelsQuery.toLowerCase().trim()}`;
+
+          if (pexelsCache.has(oldPexelsKey) && !pexelsCache.has(newPexelsKey)) {
+            const val = pexelsCache.get(oldPexelsKey);
+            pexelsCache.set(newPexelsKey, val);
+            migratedPexels++;
+          }
+        }
+      }
+
+      // 4. Pexels Places Image Cache Migration
+      const itineraryData = tripCache.get(newItineraryKey);
+      if (Array.isArray(itineraryData)) {
+        for (const day of itineraryData) {
+          if (day.places) {
+            for (const place of day.places) {
+              const oldPexelsQuery = `${place.place_name || place.name || place.title || "sight"} ${dest}`.trim();
+              const oldPexelsKey = `pexels-${oldPexelsQuery.toLowerCase().trim()}`;
+
+              const newPexelsQuery = `${place.place_name || place.name || place.title || "travel destination"} ${day.theme || ""}`.trim();
+              const newPexelsKey = `pexels-${newPexelsQuery.toLowerCase().trim()}`;
+
+              if (pexelsCache.has(oldPexelsKey) && !pexelsCache.has(newPexelsKey)) {
+                const val = pexelsCache.get(oldPexelsKey);
+                pexelsCache.set(newPexelsKey, val);
+                migratedPexels++;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  if (migratedTrips > 0 || migratedPexels > 0) {
+    console.log(`Cache migration finished! Migrated ${migratedTrips} trip keys and ${migratedPexels} pexels keys.`);
+    saveCache(TRIP_CACHE_FILE, tripCache);
+    saveCache(PEXELS_CACHE_FILE, pexelsCache);
+  } else {
+    console.log("No keys needed migration.");
+  }
+}
+
+async function populateDestination(location, config) {
   console.log(`\n========================================`);
-  console.log(`Processing destination: ${location}`);
+  console.log(`Processing destination: ${location} (${config.traveller} / ${config.budget})`);
   console.log(`========================================`);
+
+  const frontendTraveller = getFrontendTravellerString(config.traveller);
 
   // 1. Basic details and Hotels
   const basicPrompt = AI_PROMPT_BASIC.replaceAll("{location}", location)
     .replace("{days}", config.days)
-    .replace("{traveller}", config.traveller)
+    .replace("{traveller}", frontendTraveller)
     .replace("{budget}", config.budget)
     .replace("{budget}", config.budget);
 
-  const basicPromptKey = `trip-${basicPrompt.toLowerCase().replace(/\s+/g, " ").trim().substring(0, 100).replace(/[^a-z0-9]/g, "-")}-len-${basicPrompt.length}`;
+  const basicPromptKey = getCacheKey(basicPrompt);
 
   if (tripCache.has(basicPromptKey)) {
     console.log(`[Basic Cache Hit] Skipping Gemini call.`);
@@ -274,10 +387,10 @@ async function populateDestination(location) {
   // 2. Detailed Itinerary
   const itineraryPrompt = AI_PROMPT_ITINERARY.replaceAll("{location}", location)
     .replace("{days}", config.days)
-    .replace("{traveller}", config.traveller)
+    .replace("{traveller}", frontendTraveller)
     .replace("{budget}", config.budget);
 
-  const itineraryPromptKey = `trip-${itineraryPrompt.toLowerCase().replace(/\s+/g, " ").trim().substring(0, 100).replace(/[^a-z0-9]/g, "-")}-len-${itineraryPrompt.length}`;
+  const itineraryPromptKey = getCacheKey(itineraryPrompt);
 
   if (tripCache.has(itineraryPromptKey)) {
     console.log(`[Itinerary Cache Hit] Skipping Gemini call.`);
@@ -300,7 +413,7 @@ async function populateDestination(location) {
   const basicData = tripCache.get(basicPromptKey);
   if (basicData?.hotels_options) {
     for (const hotel of basicData.hotels_options) {
-      const query = `${hotel.hotel_name || "hotel"} ${location}`.trim();
+      const query = `${hotel.hotel_name || "hotel"} ${hotel.address || ""}`.trim();
       await fetchPexelsImage(query);
     }
   }
@@ -310,7 +423,7 @@ async function populateDestination(location) {
     for (const day of itineraryData) {
       if (day.places) {
         for (const place of day.places) {
-          const query = `${place.place_name || "sight"} ${location}`.trim();
+          const query = `${place.place_name || place.name || place.title || "travel destination"} ${day.theme || ""}`.trim();
           await fetchPexelsImage(query);
         }
       }
@@ -323,14 +436,19 @@ async function populateDestination(location) {
 }
 
 async function run() {
-  console.log(`Starting prepopulation for ${destinations.length} destinations...`);
+  // First migrate any existing cache entries to the correct format
+  migrateCache();
+
+  console.log(`Starting prepopulation for ${destinations.length} destinations with ${configs.length} configurations...`);
   for (const dest of destinations) {
-    try {
-      await populateDestination(dest);
-      // Extra delay between destinations to avoid quota/rate limits
-      await delay(3000);
-    } catch (error) {
-      console.error(`Error populating ${dest}:`, error.message);
+    for (const config of configs) {
+      try {
+        await populateDestination(dest, config);
+        // Extra delay between runs to avoid quota/rate limits
+        await delay(3000);
+      } catch (error) {
+        console.error(`Error populating ${dest} with config ${JSON.stringify(config)}:`, error.message);
+      }
     }
   }
   console.log("\nPrepopulation completed successfully!");

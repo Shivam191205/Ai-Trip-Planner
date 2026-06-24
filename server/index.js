@@ -16,6 +16,10 @@ const PORT = process.env.PORT || 5000;
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 const MODELS = [
+  "gemini-3.1-flash-lite",
+  "gemini-3.1-flash-lite-preview",
+  "gemini-3-flash-preview",
+  "gemini-flash-lite-latest",
   "gemini-2.5-flash-lite",
   "gemini-3.5-flash",
   "gemini-2.5-flash",

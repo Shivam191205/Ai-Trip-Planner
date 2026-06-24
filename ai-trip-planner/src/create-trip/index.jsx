@@ -282,7 +282,11 @@ function CreateTrip() {
   const handleGenerateTrip = async (dataToUse) => {
     const actualData = (dataToUse && !dataToUse.target && !dataToUse.preventDefault) ? dataToUse : formData;
     
-    const user = localStorage.getItem("user") || (import.meta.env.DEV ? JSON.stringify({ email: "dev@example.com", name: "Dev User", picture: "https://lh3.googleusercontent.com/a/default-user" }) : null);
+    let user = localStorage.getItem("user");
+    if (!user && import.meta.env.DEV) {
+      user = JSON.stringify({ email: "dev@example.com", name: "Dev User", picture: "https://lh3.googleusercontent.com/a/default-user" });
+      localStorage.setItem("user", user);
+    }
     if (!user) {
       setOpenDialog(true);
       return;

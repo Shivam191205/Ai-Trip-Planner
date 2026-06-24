@@ -96,8 +96,7 @@ Use this exact JSON structure:
     }
   ]
 }
-Give 4 to 5 hotel options with details like name, address, price range per night, image url, geo coordinates, rating and a brief description.
-Give me exact image url and not any example url. The image should be relevant to the place or hotel. Do not return any placeholder url. If you do not have an exact image url.
+Give 4 to 5 hotel options with details like name, address, price range per night, geo coordinates, rating and a brief description.
 `;
 
 export const AI_PROMPT_ITINERARY = `
@@ -162,5 +161,4 @@ Use this exact JSON structure (return only the array of days):
 ]
 
 For the itinerary, provide a day-wise breakdown of activities. Each day should have a theme (e.g., adventure, culture, relaxation) and a list of places to visit with details like name, description, image url, geo coordinates, ticket pricing, travel time from the previous location, recommended time to spend at each place, and the best time to visit. Also include one lunch and one dinner restaurant recommendation for each day with details like name, cuisine type, best time to visit, and budget level.
-Give me exact image url and not any example url. The image should be relevant to the place or hotel. Do not return any placeholder url. If you do not have an exact image url.
 `;
