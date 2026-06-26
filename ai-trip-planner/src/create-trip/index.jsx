@@ -528,14 +528,17 @@ function CreateTrip() {
               <label className="text-sm font-bold text-gray-700 flex items-center gap-1.5">
                 <span>🛫</span> Where are you flying from?
               </label>
-              <Input
-                type="text"
-                placeholder="Departure city, e.g. Delhi"
-                value={departureCity}
-                onChange={(e) => setDepartureCity(e.target.value)}
-                className="rounded-2xl border-gray-200 focus:border-emerald-500 focus:ring-emerald-500/20 bg-white py-5 text-base shadow-xs"
-                required
-              />
+              <div className="rounded-2xl border border-gray-200 bg-white p-2 shadow-xs transition-all focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/20">
+                <GeoapifyContext apiKey={import.meta.env.VITE_GEOAPIFY_API_KEY}>
+                  <GeoapifyGeocoderAutocomplete
+                    placeholder="Departure city, e.g. Delhi"
+                    value={departureCity}
+                    placeSelect={(value) => {
+                      setDepartureCity(value.properties.formatted);
+                    }}
+                  />
+                </GeoapifyContext>
+              </div>
             </div>
 
             <div className="flex flex-col gap-2">

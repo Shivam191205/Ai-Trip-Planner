@@ -103,6 +103,7 @@ export const AI_PROMPT_ITINERARY = `
 Generate a detailed day-wise itinerary and realistic flight options in STRICT JSON format only.
 
 Location: {location}
+Departure City: {departureCity}
 Duration: {days} Days
 Traveler: {traveller}
 Budget: {budget}

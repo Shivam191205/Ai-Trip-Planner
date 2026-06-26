@@ -214,6 +214,7 @@ function ViewTrip() {
       setItineraryLoading(true);
       try {
         const FINAL_PROMPT = AI_PROMPT_ITINERARY.replaceAll('{location}', userSelection?.location)
+          .replace('{departureCity}', userSelection?.departureCity || 'Major Hubs')
           .replace('{days}', userSelection?.days)
           .replace('{traveller}', userSelection?.traveller)
           .replace('{budget}', userSelection?.budget);
