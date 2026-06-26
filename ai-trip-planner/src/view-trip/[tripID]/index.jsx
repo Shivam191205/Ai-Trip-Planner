@@ -9,6 +9,7 @@ import InfoSection from '../components/InfoSection';
 import WeatherForecast from '../components/WeatherForecast';
 import Hotels from '../components/Hotels';
 import PlacesToVisit from '../components/PlacesToVisit';
+import Flights from '../components/Flights';
 import html2canvas from 'html2canvas-pro';
 import { jsPDF } from 'jspdf';
 
@@ -199,8 +200,8 @@ function ViewTrip() {
             const fullTrip = { ...data, tripData: parsedTripData ?? data.tripData };
             setTrip(fullTrip);
 
-            // If itinerary doesn't exist, generate it in the background
-            if (!parsedTripData?.itinerary || parsedTripData.itinerary.length === 0) {
+            // If itinerary doesn't exist or flights don't exist, generate them in the background
+            if (!parsedTripData?.itinerary || parsedTripData.itinerary.length === 0 || !parsedTripData?.flights) {
               generateItineraryInBackground(parsedTripData ?? data.tripData, data.userSelection);
             }
         }else{
@@ -217,15 +218,16 @@ function ViewTrip() {
           .replace('{traveller}', userSelection?.traveller)
           .replace('{budget}', userSelection?.budget);
 
-        console.log("Generating itinerary in background...");
+        console.log("Generating itinerary and flights in background...");
         const result = await chatSession.sendMessage(FINAL_PROMPT);
         const textResponse = result.response.text();
 
-        const parsedItinerary = parseTripData(textResponse);
-        if (parsedItinerary) {
+        const parsedResponse = parseTripData(textResponse);
+        if (parsedResponse && parsedResponse.itinerary) {
           const updatedTripData = {
             ...currentTripData,
-            itinerary: parsedItinerary
+            itinerary: parsedResponse.itinerary,
+            flights: parsedResponse.flights || []
           };
           const docRef = doc(db, "trips", tripID);
           await updateDoc(docRef, {
@@ -236,12 +238,12 @@ function ViewTrip() {
             ...prev,
             tripData: updatedTripData
           }));
-          toast.success("Itinerary generated successfully!");
+          toast.success("Itinerary and flights generated successfully!");
         } else {
-          throw new Error("Parsed itinerary is empty");
+          throw new Error("Parsed background data is invalid");
         }
       } catch (error) {
-        console.error("Failed to generate itinerary:", error);
+        console.error("Failed to generate itinerary and flights:", error);
         toast.error("Failed to generate detailed itinerary. Please try reloading.");
       } finally {
         setItineraryLoading(false);
@@ -323,6 +325,7 @@ function ViewTrip() {
           isPrinting={isPrinting} 
           trip={trip}
         />
+        <Flights trip={trip} loading={itineraryLoading} isPrinting={isPrinting} />
         <Hotels trip={trip} isPrinting={isPrinting} />
         <PlacesToVisit trip={trip} isPrinting={isPrinting} weatherData={weatherData} loading={itineraryLoading} />
       </div>

@@ -100,7 +100,7 @@ Give 4 to 5 hotel options with details like name, address, price range per night
 `;
 
 export const AI_PROMPT_ITINERARY = `
-Generate a detailed day-wise itinerary in STRICT JSON format only.
+Generate a detailed day-wise itinerary and realistic flight options in STRICT JSON format only.
 
 Location: {location}
 Duration: {days} Days
@@ -118,47 +118,55 @@ IMPORTANT RULES:
 8. Return parsable JSON only
 9. If an image URL is unavailable, return an empty string ""
 10. Never truncate the JSON response
+11. Flight pricing should be realistic estimates in Indian Rupees (INR) using the ₹ symbol.
 
-Use this exact JSON structure (return only the array of days):
+Use this exact JSON structure:
 
-[
-  {
-    "day": 1,
-    "theme": "string",
-
-    "places": [
-      {
-        "place_name": "string",
-        "details": "string",
-        "image_url": "string",
-
-        "geo_coordinates": {
-          "latitude": 0,
-          "longitude": 0
-        },
-
-        "ticket_pricing": "string",
-        "travel_time_from_previous_location": "string",
-        "time_to_spend": "string",
-        "best_time_to_visit": "string"
-      }
-    ],
-
-    "lunch_option": {
-      "restaurant_name": "string",
-      "cuisine": "string",
-      "best_time_to_visit": "string",
-      "budget_level": "string"
-    },
-
-    "dinner_option": {
-      "restaurant_name": "string",
-      "cuisine": "string",
-      "best_time_to_visit": "string",
-      "budget_level": "string"
+{
+  "flights": [
+    {
+      "airline": "string",
+      "flight_type": "string", // e.g., "Non-Stop", "1-Stop"
+      "flight_date": "string", // e.g., "YYYY-MM-DD"
+      "estimated_price": "string", // e.g., "₹5,400"
+      "booking_link_suggestion": "string" // e.g., "https://www.google.com/travel/flights"
     }
-  }
-]
+  ],
+  "itinerary": [
+    {
+      "day": 1,
+      "theme": "string",
+      "places": [
+        {
+          "place_name": "string",
+          "details": "string",
+          "image_url": "string",
+          "geo_coordinates": {
+            "latitude": 0,
+            "longitude": 0
+          },
+          "ticket_pricing": "string",
+          "travel_time_from_previous_location": "string",
+          "time_to_spend": "string",
+          "best_time_to_visit": "string"
+        }
+      ],
+      "lunch_option": {
+        "restaurant_name": "string",
+        "cuisine": "string",
+        "best_time_to_visit": "string",
+        "budget_level": "string"
+      },
+      "dinner_option": {
+        "restaurant_name": "string",
+        "cuisine": "string",
+        "best_time_to_visit": "string",
+        "budget_level": "string"
+      }
+    }
+  ]
+}
 
-For the itinerary, provide a day-wise breakdown of activities. Each day should have a theme (e.g., adventure, culture, relaxation) and a list of places to visit with details like name, description, image url, geo coordinates, ticket pricing, travel time from the previous location, recommended time to spend at each place, and the best time to visit. Also include one lunch and one dinner restaurant recommendation for each day with details like name, cuisine type, best time to visit, and budget level.
+For the itinerary, provide a day-wise breakdown of activities. Each day should have a theme (e.g., adventure, culture, relaxation) and a list of places to visit. Also include one lunch and one dinner restaurant recommendation for each day.
+Provide 2 to 3 budget-matching flight recommendations under "flights" matching the location.
 `;
