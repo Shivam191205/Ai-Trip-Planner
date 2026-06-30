@@ -11,6 +11,7 @@ import {
 
 import CreateTrip from './create-trip/index.jsx'
 import Header from './custom/Header.jsx'
+import Footer from './custom/Footer.jsx'
 import { Toaster } from 'sonner'
 
 import { GoogleOAuthProvider } from '@react-oauth/google';
@@ -21,10 +22,13 @@ import MyTrips from './my-trips/index.jsx'
 
 function Layout() {
   return (
-    <>
+    <div className="flex flex-col min-h-screen">
       <Header />
-      <Outlet />
-    </>
+      <div className="flex-grow">
+        <Outlet />
+      </div>
+      <Footer />
+    </div>
   )
 }
 
